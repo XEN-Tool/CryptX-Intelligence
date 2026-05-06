@@ -1,10 +1,7 @@
-fastapi==0.111.0
-uvicorn==0.30.0
-requests==2.32.3
-python-dotenv==1.0.1
-dnspython==2.6.1
-whois==0.9.27
-geoip2==4.8.0
-ipwhois==1.2.0
-cryptography==42.0.8
-aiohttp==3.9.5
+fastapi
+uvicorn[standard]
+requests
+python-dotenv
+dnspython
+aiohttp
+ipwhois
