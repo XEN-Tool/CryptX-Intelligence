@@ -1,0 +1,9 @@
+/api/geo/
+/api/abuse/
+/api/whois/
+/api/ssl/
+/api/dns/
+/api/rdns/
+/api/ports/
+/api/traceroute/
+/api/intelx/search
