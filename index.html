@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>CryptX Intelligence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23000'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ff0033' stroke-width='7'/><circle cx='50' cy='50' r='10' fill='%23ff0033'/></svg>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#080010;
+  --bg2:#0d0018;
+  --bg3:#120020;
+  --border:#2a0040;
+  --border2:#3a0060;
+  --accent:#ff0033;
+  --accent2:#cc0029;
+  --glow:rgba(255,0,51,0.18);
+  --glowbig:rgba(255,0,51,0.35);
+  --text:#e0c0ff;
+  --text2:#a080c0;
+  --text3:#6040a0;
+  --red:#ff0033;
+  --redglow:0 0 16px rgba(255,0,51,0.5);
+}
+body{font-family:'Share Tech Mono',monospace;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,0,51,0.008) 2px,rgba(255,0,51,0.008) 4px);pointer-events:none;z-index:9990;}
+/* CURSOR */
+.cursor{position:fixed;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle,rgba(255,0,60,0.35),transparent 70%);transform:translate(-50%,-50%);pointer-events:none;z-index:9999;mix-blend-mode:screen;}
+.cursor-dot{position:fixed;width:5px;height:5px;border-radius:50%;background:var(--red);transform:translate(-50%,-50%);pointer-events:none;z-index:10000;box-shadow:var(--redglow);}
+/* PARTICLES */
+#particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.particle{position:absolute;border-radius:50%;background:var(--red);opacity:0;animation:particleFly linear infinite;}
+@keyframes particleFly{0%{opacity:0;transform:translateY(0);}10%{opacity:.4;}90%{opacity:.08;}100%{opacity:0;transform:translateY(-100vh);}}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:72px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:8px;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:.3s;}
+.sidebar:hover{width:220px;}
+.sidebar-logo{width:40px;height:40px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-weight:900;font-size:14px;color:#000;margin-bottom:16px;flex-shrink:0;box-shadow:var(--redglow);}
+.nav-item{width:100%;display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;transition:.2s;border-left:2px solid transparent;color:var(--text3);font-size:10px;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;border-radius:0 6px 6px 0;}
+.nav-item:hover{color:var(--text);background:var(--glow);border-left-color:var(--accent);}
+.nav-item.active{color:var(--red);background:var(--glow);border-left-color:var(--red);}
+.nav-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
+.nav-label{opacity:0;transition:.2s;font-size:10px;}
+.sidebar:hover .nav-label{opacity:1;}
+.nav-divider{width:40px;height:1px;background:var(--border);margin:8px 0;flex-shrink:0;}
+
+/* MAIN */
+.main{margin-left:72px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+
+/* TOPBAR */
+.topbar{height:60px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:99;}
+.topbar-title{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--red);letter-spacing:4px;text-shadow:var(--redglow);animation:titleFlicker 4s infinite;}
+@keyframes titleFlicker{0%,97%,100%{opacity:1;}98.5%{opacity:.7;}}
+.topbar-sub{font-size:9px;color:var(--text3);letter-spacing:3px;}
+.topbar-spacer{flex:1;}
+.topbar-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);letter-spacing:2px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.topbar-search{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 14px;flex:1;max-width:420px;}
+.topbar-search input{background:none;border:none;outline:none;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;width:100%;}
+.topbar-search input::placeholder{color:var(--text3);}
+.topbar-search-icon{color:var(--text3);font-size:14px;}
+
+/* CONTENT */
+.content{flex:1;padding:28px;display:none;}
+.content.active{display:block;}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:28px;}
+.page-title{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--red);letter-spacing:4px;margin-bottom:6px;}
+.page-sub{font-size:10px;color:var(--text3);letter-spacing:2px;}
+
+/* STAT CARDS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;transition:.2s;}
+.stat-card:hover{border-color:var(--border2);box-shadow:0 0 20px var(--glow);}
+.stat-label{font-size:9px;color:var(--text3);letter-spacing:3px;text-transform:uppercase;}
+.stat-value{font-family:'Orbitron',sans-serif;font-size:22px;color:var(--red);text-shadow:var(--redglow);}
+.stat-sub{font-size:9px;color:var(--text3);}
+
+/* SECTION */
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden;}
+.section-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.section-title{font-size:10px;color:var(--red);letter-spacing:3px;text-transform:uppercase;font-family:'Orbitron',sans-serif;}
+.section-badge{font-size:9px;padding:2px 8px;border-radius:20px;border:1px solid;letter-spacing:2px;}
+.badge-real{color:#00ff88;border-color:#00ff88;background:rgba(0,255,136,.08);}
+.badge-sim{color:var(--text3);border-color:var(--border2);}
+.section-body{padding:20px;}
+
+/* SEARCH BOX */
+.search-box{display:flex;gap:12px;align-items:stretch;}
+.search-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 18px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:2px;outline:none;transition:.3s;}
+.search-input:focus{border-color:var(--red);box-shadow:0 0 15px var(--glow);}
+.search-input::placeholder{color:var(--text3);}
+.search-hint{font-size:10px;color:var(--text3);letter-spacing:2px;margin-top:8px;}
+.btn{padding:12px 24px;border:1px solid var(--red);background:transparent;color:var(--red);border-radius:8px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;transition:.3s;position:relative;overflow:hidden;white-space:nowrap;}
+.btn::before{content:'';position:absolute;inset:0;background:var(--red);transform:scaleX(0);transform-origin:left;transition:.3s;z-index:-1;}
+.btn:hover{color:#000;box-shadow:var(--redglow);}
+.btn:hover::before{transform:scaleX(1);}
+.btn:active{transform:scale(.97);}
+.btn-sm{padding:8px 16px;font-size:9px;}
+.btn-ghost{border-color:var(--border2);color:var(--text3);}
+.btn-ghost:hover{border-color:var(--red);color:var(--red);}
+.btn-ghost::before{display:none;}
+
+/* PROGRESS BAR */
+.progress-wrap{margin-top:14px;display:none;}
+.progress-label{font-size:10px;color:var(--text3);letter-spacing:3px;margin-bottom:6px;}
+.progress-bar{height:3px;background:var(--border);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--red),#ff6680);transition:.15s;box-shadow:var(--redglow);}
+
+/* RESULTS GRID */
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.result-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:.25s;position:relative;overflow:hidden;animation:cardIn .3s ease both;}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.result-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,0,51,.04),transparent);pointer-events:none;}
+.result-card:hover{border-color:var(--border2);box-shadow:0 0 18px var(--glow);transform:translateY(-2px);}
+.result-card:hover .rc-copy{opacity:1;}
+.rc-label{font-size:9px;color:var(--red);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;}
+.rc-value{font-size:12px;color:var(--text);word-break:break-all;line-height:1.5;}
+.rc-copy{position:absolute;top:10px;right:10px;font-size:10px;color:var(--text3);opacity:0;transition:.2s;}
+.copy-flash{position:absolute;inset:0;background:rgba(255,0,51,.1);border-radius:8px;pointer-events:none;animation:flashOut .4s ease forwards;}
+@keyframes flashOut{0%{opacity:1;}100%{opacity:0;}}
+
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table tr{border-bottom:1px solid var(--border);}
+.data-table tr:last-child{border-bottom:none;}
+.data-table td{padding:8px 12px;font-size:11px;}
+.data-table td:first-child{color:var(--text3);letter-spacing:2px;width:40%;font-size:10px;}
+.data-table td:last-child{color:var(--text);}
+
+/* PORT TABLE */
+.port-row{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);}
+.port-row:last-child{border-bottom:none;}
+.port-num{color:var(--text3);font-size:10px;width:50px;}
+.port-name{color:var(--text2);font-size:10px;flex:1;}
+.port-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.port-dot.open{background:#00ff88;box-shadow:0 0 8px #00ff88;animation:portPulse 1.5s infinite;}
+.port-dot.closed{background:#300;}
+.port-dot.filtered{background:#440;}
+@keyframes portPulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.port-status{font-size:10px;min-width:55px;text-align:right;letter-spacing:1px;}
+.port-status.open{color:#00ff88;}
+.port-status.closed{color:#440000;}
+.port-status.filtered{color:#554400;}
+
+/* TRACEROUTE */
+.hop-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);opacity:0;animation:hopIn .4s ease forwards;}
+@keyframes hopIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+.hop-num{color:var(--text3);font-size:10px;width:24px;}
+.hop-line{flex:1;height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
+.hop-fill{height:100%;background:linear-gradient(90deg,var(--red),#ff6680);box-shadow:var(--redglow);animation:hopFill .5s ease forwards;}
+@keyframes hopFill{from{width:0%;}to{width:100%;}}
+.hop-ip{color:var(--text);font-size:11px;min-width:140px;}
+.hop-ms{color:var(--text3);font-size:10px;min-width:50px;text-align:right;}
+
+/* MAP */
+#map{width:100%;height:360px;border-radius:10px;border:1px solid var(--border);}
+.leaflet-popup-content-wrapper{background:var(--bg2)!important;border:1px solid var(--red)!important;border-radius:10px!important;box-shadow:0 0 20px var(--glow)!important;font-family:'Share Tech Mono',monospace;color:var(--text);}
+.leaflet-popup-tip{background:var(--red)!important;}
+.leaflet-popup-content{margin:12px 16px!important;}
+
+/* RADAR */
+#radarCanvas{display:block;margin:0 auto;}
+
+/* LEAK / INTEL CARDS */
+.intel-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:10px;cursor:pointer;transition:.25s;position:relative;overflow:hidden;animation:cardIn .3s ease both;}
+.intel-card:hover{border-color:var(--border2);box-shadow:0 0 15px var(--glow);transform:translateX(4px);}
+.intel-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--red);opacity:0;transition:.2s;}
+.intel-card:hover::before{opacity:1;}
+.intel-type{font-size:9px;color:var(--red);letter-spacing:3px;margin-bottom:6px;text-transform:uppercase;}
+.intel-value{font-size:12px;color:var(--text);word-break:break-all;line-height:1.6;}
+.intel-meta{font-size:9px;color:var(--text3);margin-top:6px;letter-spacing:1px;}
+
+/* EXPORT BAR */
+.export-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+
+/* POPUP OVERLAY */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:8000;display:none;align-items:center;justify-content:center;}
+#overlay.open{display:flex;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.popup-box{background:var(--bg2);border:1px solid var(--red);border-radius:14px;padding:32px 36px 26px;max-width:560px;width:92%;position:relative;box-shadow:0 0 60px var(--glowbig);animation:popIn .3s cubic-bezier(.23,1,.32,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.88) translateY(18px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.popup-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:transparent;color:var(--red);cursor:pointer;font-size:16px;transition:.2s;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;padding:0;letter-spacing:0;margin:0;}
+.popup-close:hover{background:rgba(255,0,51,.15);transform:rotate(90deg);}
+.popup-close::before{display:none;}
+.popup-title{color:var(--red);font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:4px;margin-bottom:12px;}
+.popup-divider{height:1px;background:linear-gradient(90deg,transparent,var(--red),transparent);margin:14px 0;}
+.popup-value{font-size:17px;color:#fff;word-break:break-all;line-height:1.7;text-shadow:0 0 10px rgba(255,100,100,.25);}
+.popup-value.glitch{animation:glitch .4s ease;}
+@keyframes glitch{0%{transform:none;}20%{transform:skewX(-2deg);color:#ff6680;}40%{transform:skewX(2deg) translateX(3px);}60%{transform:skewX(-1deg) translateX(-2px);}80%,100%{transform:none;}}
+.popup-meta{font-size:10px;color:var(--text3);letter-spacing:2px;}
+.popup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+.popup-btn{padding:7px 14px;border:1px solid var(--border2);background:transparent;color:var(--text3);border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;transition:.25s;margin:0;}
+.popup-btn:hover{border-color:var(--red);color:var(--red);background:var(--glow);}
+.popup-btn::before{display:none;}
+
+/* NOTIFICATIONS */
+#notif{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.notif-item{background:var(--bg2);border:1px solid var(--red);border-radius:8px;padding:10px 16px;font-size:11px;color:var(--text);letter-spacing:2px;box-shadow:0 0 20px var(--glow);animation:notifIn .3s ease,notifOut .3s ease 2.5s forwards;max-width:280px;}
+@keyframes notifIn{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
+@keyframes notifOut{to{opacity:0;transform:translateX(16px);}}
+
+/* HINT */
+#hint{position:fixed;bottom:20px;left:86px;z-index:9998;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:10px;color:var(--text3);letter-spacing:2px;max-width:260px;display:none;line-height:1.7;}
+
+/* STATUS MSG */
+.status-msg{text-align:center;padding:48px;color:var(--text3);font-size:11px;letter-spacing:3px;}
+
+/* COUNTER ANIM */
+@keyframes countUp{from{opacity:.4;}to{opacity:1;}}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+
+/* DNS RECORDS */
+.dns-type{display:inline-block;background:var(--glow);border:1px solid var(--border2);color:var(--red);font-size:9px;padding:2px 8px;border-radius:4px;letter-spacing:2px;margin-bottom:8px;}
+.dns-record{font-size:11px;color:var(--text);padding:4px 0;border-bottom:1px solid var(--border);word-break:break-all;}
+.dns-record:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+<div id="particles"></div>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- POPUP -->
+<div id="overlay" onclick="overlayClick(event)">
+  <div class="popup-box">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <div class="popup-title" id="popupTitle"></div>
+    <div class="popup-divider"></div>
+    <div class="popup-value" id="popupValue"></div>
+    <div class="popup-divider"></div>
+    <div class="popup-meta" id="popupMeta"></div>
+    <div class="popup-actions" id="popupActions"></div>
+  </div>
+</div>
+
+<div id="notif"></div>
+<div id="hint">💡 Double-cliquez sur un résultat pour l'ouvrir en détail.</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">CX</div>
+  <div class="nav-item active" onclick="goTab('ip')"><span class="nav-icon">◈</span><span class="nav-label">IP / Info</span></div>
+  <div class="nav-item" onclick="goTab('leak')"><span class="nav-icon">⚠</span><span class="nav-label">CryptX Leaks</span></div>
+  <div class="nav-divider"></div>
+  <div class="nav-item" onclick="goTab('fav')"><span class="nav-icon">★</span><span class="nav-label">Favoris</span></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">CRYPTX INTELLIGENCE</div>
+      <div class="topbar-sub">OSINT ENGINE v3.0 — BACKEND ACTIVE</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      SYSTÈME OPÉRATIONNEL
+    </div>
+  </div>
+
+  <!-- IP / INFO -->
+  <div class="content active" id="tab-ip">
+    <div class="page-header">
+      <div class="page-title">◈ IP / INFO</div>
+      <div class="page-sub">Analyse complète d'une adresse IP ou d'un domaine</div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="section">
+      <div class="section-header"><div class="section-title">⬡ Cible</div></div>
+      <div class="section-body">
+        <div class="search-box">
+          <input class="search-input" id="ipInput" placeholder="8.8.8.8 / domain.com" onkeydown="if(event.key==='Enter')runScan()">
+          <div class="favBtn-wrap" style="display:flex;align-items:center;">
+            <div id="favBtn" onclick="toggleFav()" style="width:46px;height:46px;border:1px solid var(--border2);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:20px;transition:.3s;" title="Ajouter aux favoris">★</div>
+          </div>
+          <button class="btn" onclick="runScan()">▶ SCAN</button>
+        </div>
+        <div class="search-hint">Enter a domain, URL, Email, IP..</div>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-label" id="progressLabel">INIT SCAN...</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-card"><div class="stat-label">IP Cible</div><div class="stat-value" id="statIp" style="font-size:14px;">—</div></div>
+      <div class="stat-card"><div class="stat-label">Pays</div><div class="stat-value" id="statCountry" style="font-size:14px;">—</div></div>
+      <div class="stat-card"><div class="stat-label">Abuse Score</div><div class="stat-value" id="statAbuse">—</div></div>
+      <div class="stat-card"><div class="stat-label">Ports Ouverts</div><div class="stat-value" id="statPorts">—</div></div>
+      <div class="stat-card"><div class="stat-label">ISP</div><div class="stat-value" id="statIsp" style="font-size:12px;">—</div></div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="export-bar" id="exportBar" style="display:none">
+      <button class="btn btn-ghost btn-sm" onclick="exportData('json')">⬇ JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportData('csv')">⬇ CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportData('pdf')">⬇ PDF</button>
+    </div>
+
+    <!-- INFO GRID -->
+    <div class="section" id="infoSection" style="display:none">
+      <div class="section-header"><div class="section-title">⬡ Données IP</div><span class="section-badge badge-real">RÉEL</span></div>
+      <div class="section-body"><div class="results-grid" id="infoGrid"></div></div>
+    </div>
+
+    <!-- TWO COL: RADAR + MAP -->
+    <div class="two-col" id="mapRadarSection" style="display:none">
+      <div class="section">
+        <div class="section-header"><div class="section-title">⬡ Threat Radar</div><span class="section-badge badge-real">RÉEL — AbuseIPDB</span></div>
+        <div class="section-body"><canvas id="radarCanvas" width="300" height="260"></canvas></div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">⬡ Géolocalisation</div><span class="section-badge badge-real">RÉEL</span></div>
+        <div class="section-body" style="padding:0"><div id="map"></div></div>
+      </div>
+    </div>
+
+    <!-- WHOIS + SSL -->
+    <div class="two-col" id="whoisSslSection" style="display:none">
+      <div class="section">
+        <div class="section-header"><div class="section-title">⬡ WHOIS</div><span class="section-badge badge-real">RÉEL</span></div>
+        <div class="section-body"><table class="data-table" id="whoisTable"></table></div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">⬡ Certificat SSL</div><span class="section-badge badge-real">RÉEL</span></div>
+        <div class="section-body"><table class="data-table" id="sslTable"></table></div>
+      </div>
+    </div>
+
+    <!-- DNS RECORDS -->
+    <div class="section" id="dnsSection" style="display:none">
+      <div class="section-header"><div class="section-title">⬡ DNS Records</div><span class="section-badge badge-real">RÉEL</span></div>
+      <div class="section-body" id="dnsBody"></div>
+    </div>
+
+    <!-- PORTS -->
+    <div class="section" id="portsSection" style="display:none">
+      <div class="section-header"><div class="section-title">⬡ Port Scan</div><span class="section-badge badge-real">RÉEL — TCP</span></div>
+      <div class="section-body" id="portsBody"><div class="status-msg">Scan en cours...</div></div>
+    </div>
+
+    <!-- TRACEROUTE -->
+    <div class="section" id="traceSection" style="display:none">
+      <div class="section-header"><div class="section-title">⬡ Traceroute</div><span class="section-badge badge-real">RÉEL</span></div>
+      <div class="section-body" id="traceBody"><div class="status-msg">Traceroute en cours...</div></div>
+    </div>
+  </div>
+
+  <!-- LEAK PAGE -->
+  <div class="content" id="tab-leak">
+    <div class="page-header">
+      <div class="page-title">⚠ CRYPTX LEAKS</div>
+      <div class="page-sub">Recherche dans les bases de données publiques de leaks via IntelX</div>
+    </div>
+    <div class="section">
+      <div class="section-header"><div class="section-title">⬡ Cible</div></div>
+      <div class="section-body">
+        <div class="search-box">
+          <input class="search-input" id="leakInput" placeholder="IP / domaine / email / URL / hash..." onkeydown="if(event.key==='Enter')runLeak()">
+          <button class="btn" onclick="runLeak()">▶ SCAN LEAK</button>
+        </div>
+        <div class="search-hint">Recherche dans WikiLeaks, General Leaks, Dumpster, SciHub</div>
+        <div class="progress-wrap" id="leakProgressWrap">
+          <div class="progress-label" id="leakProgressLabel">CONNEXION INTELX...</div>
+          <div class="progress-bar"><div class="progress-fill" id="leakProgressFill"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="export-bar" id="leakExportBar" style="display:none">
+      <button class="btn btn-ghost btn-sm" onclick="exportLeak('json')">⬇ JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportLeak('csv')">⬇ CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportLeak('txt')">⬇ TXT</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportLeak('pdf')">⬇ PDF</button>
+    </div>
+    <div id="leakStats" style="display:none" class="stats-row">
+      <div class="stat-card"><div class="stat-label">Résultats</div><div class="stat-value" id="leakCount">0</div></div>
+      <div class="stat-card"><div class="stat-label">Sources</div><div class="stat-value" id="leakSources">0</div></div>
+      <div class="stat-card"><div class="stat-label">Cible</div><div class="stat-value" id="leakTarget" style="font-size:13px;">—</div></div>
+    </div>
+    <div id="leakResults"><div class="status-msg">⬡ ENTREZ UNE CIBLE POUR SCANNER LES LEAKS</div></div>
+  </div>
+
+  <!-- FAVORITES -->
+  <div class="content" id="tab-fav">
+    <div class="page-header">
+      <div class="page-title">★ FAVORIS</div>
+      <div class="page-sub" id="favSubtitle">0 cible enregistrée</div>
+    </div>
+    <div class="section">
+      <div class="section-header"><div class="section-title">⬡ Cibles sauvegardées</div></div>
+      <div class="section-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;" id="favList">
+          <div class="status-msg">⬡ Aucun favori enregistré</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─── PARTICLES ─── */
+(function(){const c=document.getElementById("particles");for(let i=0;i<25;i++){let p=document.createElement("div");p.className="particle";p.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${10+Math.random()*20}s;animation-delay:${Math.random()*12}s;width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;`;c.appendChild(p);}})();
+/* ─── CURSOR ─── */
+document.addEventListener("mousemove",e=>{document.getElementById("cursor").style.cssText=`left:${e.clientX}px;top:${e.clientY}px;`;document.getElementById("cursorDot").style.cssText=`left:${e.clientX}px;top:${e.clientY}px;`;});
+/* ─── HINT ─── */
+function showHint(){let h=document.getElementById("hint");h.style.display="block";setTimeout(()=>h.style.display="none",5000);}
+showHint();setInterval(showHint,60000);
+/* ─── KEYS ─── */
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closePopup();});
+
+/* ─── STATE ─── */
+const API = window.location.origin;
+let fav = JSON.parse(localStorage.getItem("cx_fav"))||[];
+let mapObj, scanData={}, leakData=[], lastQ="";
+
+/* ─── NOTIFY ─── */
+function notify(msg){let n=document.createElement("div");n.className="notif-item";n.innerText=msg;document.getElementById("notif").appendChild(n);setTimeout(()=>n.remove(),3000);}
+
+/* ─── TABS ─── */
+function goTab(t){
+  document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".content").forEach(x=>x.classList.remove("active"));
+  const tabs={ip:0,leak:1,fav:2};
+  document.querySelectorAll(".nav-item")[tabs[t]].classList.add("active");
+  document.getElementById("tab-"+t).classList.add("active");
+  if(t==="fav")renderFav();
+}
+
+/* ─── FAVORITES ─── */
+function toggleFav(){
+  let q=document.getElementById("ipInput").value.trim();if(!q)return;
+  let exists=fav.find(x=>x.ip===q);
+  if(exists){fav=fav.filter(x=>x.ip!==q);notify("✕ Retiré des favoris");}
+  else{fav.push({ip:q,date:new Date().toISOString().slice(0,10)});notify("★ Ajouté aux favoris");}
+  localStorage.setItem("cx_fav",JSON.stringify(fav));
+  updateFavBtn(q);
+}
+function updateFavBtn(q){
+  let btn=document.getElementById("favBtn");
+  let active=!!fav.find(x=>x.ip===q);
+  btn.style.color=active?"var(--red)":"var(--text3)";
+  btn.style.borderColor=active?"var(--red)":"var(--border2)";
+  btn.style.textShadow=active?"0 0 10px var(--red)":"none";
+}
+function renderFav(){
+  let el=document.getElementById("favList");el.innerHTML="";
+  document.getElementById("favSubtitle").innerText=fav.length+" cible"+(fav.length>1?"s":"")+" enregistrée"+(fav.length>1?"s":"");
+  if(!fav.length){el.innerHTML='<div class="status-msg">⬡ Aucun favori enregistré</div>';return;}
+  fav.forEach(item=>{
+    let d=document.createElement("div");
+    d.style.cssText="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;justify-content:space-between;align-items:center;transition:.2s;animation:cardIn .3s ease;";
+    d.onmouseenter=()=>d.style.borderColor="var(--border2)";
+    d.onmouseleave=()=>d.style.borderColor="var(--border)";
+    d.innerHTML=`<div><div style="color:var(--text);font-size:13px;letter-spacing:2px;cursor:pointer;" onclick="loadFav('${item.ip}')">${item.ip}</div><div style="color:var(--text3);font-size:9px;margin-top:4px;letter-spacing:1px;">Ajouté : ${item.date}</div></div><div style="display:flex;gap:8px;"><button class="btn btn-sm" style="padding:6px 12px;font-size:9px;" onclick="loadFav('${item.ip}')">▶</button><button class="btn btn-ghost btn-sm" style="padding:6px 12px;font-size:14px;font-family:Arial;" onclick="deleteFav('${item.ip}',this.closest('div').parentElement)">🗑</button></div>`;
+    el.appendChild(d);
+  });
+}
+function deleteFav(ip,el){fav=fav.filter(x=>x.ip!==ip);localStorage.setItem("cx_fav",JSON.stringify(fav));el.style.opacity="0";el.style.transform="translateX(20px)";el.style.transition=".3s";setTimeout(()=>renderFav(),300);notify("🗑 Supprimé : "+ip);}
+function loadFav(ip){document.getElementById("ipInput").value=ip;goTab("ip");runScan();}
+
+/* ─── POPUP ─── */
+function openPopup(title,value){
+  document.getElementById("popupTitle").innerText=title;
+  let v=document.getElementById("popupValue");v.innerText=value;v.classList.remove("glitch");void v.offsetWidth;v.classList.add("glitch");
+  document.getElementById("popupMeta").innerText="CRYPTX // "+new Date().toISOString().replace("T"," ").slice(0,19);
+  let acts=document.getElementById("popupActions");acts.innerHTML="";
+  [["⎘ Copier",()=>{navigator.clipboard.writeText(String(value));notify("⎘ Copié !");}],
+   ["⬇ TXT",()=>dl(String(value),"result.txt","text/plain")],
+   ["⬇ JSON",()=>dl(JSON.stringify({key:title,value},null,2),"result.json","application/json")],
+   ["⬇ PDF",()=>{let w=window.open("","_blank");w.document.write(`<html><head><style>body{background:#000;color:#cc3333;font-family:monospace;padding:30px;}h2{color:#ff0033;letter-spacing:4px;}pre{margin-top:20px;font-size:14px;white-space:pre-wrap;}</style></head><body><h2>${title}</h2><pre>${value}</pre></body></html>`);w.document.close();setTimeout(()=>w.print(),300);}]
+  ].forEach(([l,fn])=>{let b=document.createElement("button");b.className="popup-btn";b.innerText=l;b.onclick=fn;acts.appendChild(b);});
+  document.getElementById("overlay").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function closePopup(){let o=document.getElementById("overlay");o.style.opacity="0";o.style.transition="opacity .2s";setTimeout(()=>{o.classList.remove("open");o.style.opacity="";o.style.transition="";document.body.style.overflow="";},200);}
+function overlayClick(e){if(e.target===document.getElementById("overlay"))closePopup();}
+
+/* ─── HELPERS ─── */
+function dl(content,filename,type){let b=new Blob([content],{type});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;a.click();}
+function isNum(v){return !isNaN(parseFloat(v))&&isFinite(v)&&String(v).length<12;}
+function animCount(el,target){let num=parseFloat(target),dec=(String(target).split(".")[1]||"").length,start=null;function step(ts){if(!start)start=ts;let p=Math.min((ts-start)/700,1),ease=1-Math.pow(1-p,3);el.innerText=(num*ease).toFixed(dec);if(p<1)requestAnimationFrame(step);else el.innerText=target;}requestAnimationFrame(step);}
+
+/* ─── RESULT CARD ─── */
+let cardDelay=0;
+function mkCard(label,value,container){
+  let d=document.createElement("div");d.className="result-card";d.style.animationDelay=(cardDelay*35)+"ms";cardDelay++;
+  let numeric=isNum(value);
+  d.innerHTML=`<div class="rc-label">${label}</div><div class="rc-value card-val">${numeric?"0":value}</div><div class="rc-copy">⎘</div>`;
+  if(numeric)setTimeout(()=>{let el=d.querySelector(".card-val");if(el)animCount(el,value);},cardDelay*35+80);
+  d.onclick=()=>{navigator.clipboard.writeText(String(value)).then(()=>{let f=document.createElement("div");f.className="copy-flash";d.appendChild(f);setTimeout(()=>f.remove(),400);notify("⎘ Copié : "+String(value).slice(0,40));}).catch(()=>openPopup(label,value));};
+  d.ondblclick=e=>{e.stopPropagation();openPopup(label,value);};
+  document.getElementById(container).appendChild(d);
+}
+
+/* ─── PROGRESS ─── */
+const MSGS=["INIT SCAN...","RÉSOLUTION DNS...","REQUÊTE ASN...","GÉOLOCALISATION...","THREAT CHECK...","SCAN PORTS...","TRACEROUTE...","FINALISATION...","COMPLETE ✓"];
+async function progress(fillId,labelId,wrapId){
+  let el=document.getElementById(wrapId);el.style.display="block";
+  let fill=document.getElementById(fillId),label=document.getElementById(labelId);
+  fill.style.width="0%";let p=0,mi=0;
+  return new Promise(res=>{let i=setInterval(()=>{p+=13;fill.style.width=p+"%";if(mi<MSGS.length)label.innerText=MSGS[mi++];if(p>=100){clearInterval(i);setTimeout(()=>{el.style.display="none";res();},300);}},130);});
+}
+
+/* ─── SCAN ─── */
+async function runScan(){
+  let q=document.getElementById("ipInput").value.trim();if(!q)return;
+  lastQ=q;cardDelay=0;scanData={};
+  ["infoSection","mapRadarSection","whoisSslSection","dnsSection","portsSection","traceSection","statsRow","exportBar"].forEach(id=>document.getElementById(id).style.display="none");
+  document.getElementById("infoGrid").innerHTML="";
+  await progress("progressFill","progressLabel","progressWrap");
+  updateFavBtn(q);
+
+  // GEO
+  const geo=await fetch(`${API}/api/geo/${encodeURIComponent(q)}`).then(r=>r.json()).catch(()=>null);
+  if(!geo||!geo.lat){notify("✕ Cible introuvable");return;}
+  Object.assign(scanData,{IP:geo.query||q,COUNTRY:geo.country,CITY:geo.city,REGION:geo.regionName,LAT:geo.lat,LON:geo.lon,ISP:geo.isp,ORG:geo.org,ASN:geo.as,TIMEZONE:geo.timezone,ZIP:geo.zip});
+  document.getElementById("infoSection").style.display="block";
+  const fields=[["IP",geo.query||q],["COUNTRY",geo.country],["CITY",geo.city],["REGION",geo.regionName],["LAT",geo.lat],["LON",geo.lon],["ISP",geo.isp],["ORG",geo.org],["ASN",geo.as],["TIMEZONE",geo.timezone],["ZIP",geo.zip],["COUNTRY CODE",geo.countryCode],["DNS","RESOLVED"],["PLATFORM",navigator.platform],["SCREEN",screen.width+"x"+screen.height],["LANGUAGE",navigator.language]];
+  fields.forEach(([l,v])=>mkCard(l,v,"infoGrid"));
+  document.getElementById("statIp").innerText=geo.query||q;
+  document.getElementById("statCountry").innerText=geo.country||"N/A";
+  document.getElementById("statIsp").innerText=(geo.isp||"N/A").slice(0,20);
+  document.getElementById("statsRow").style.display="grid";
+  document.getElementById("exportBar").style.display="flex";
+  document.getElementById("mapRadarSection").style.display="grid";
+
+  // MAP
+  if(mapObj)mapObj.remove();
+  mapObj=L.map("map").setView([geo.lat,geo.lon],6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; OpenStreetMap'}).addTo(mapObj);
+  let icon=L.divIcon({html:`<div style="width:16px;height:16px;border-radius:50%;background:#ff0033;border:2px solid #fff;box-shadow:0 0 14px #ff0033;"></div>`,iconSize:[16,16],iconAnchor:[8,8],className:""});
+  L.marker([geo.lat,geo.lon],{icon}).addTo(mapObj).bindPopup(`<div style="font-family:'Share Tech Mono',monospace;min-width:200px;"><div style="color:#ff0033;font-size:13px;font-weight:bold;margin-bottom:8px;border-bottom:1px solid #300;padding-bottom:6px;">${geo.query||q}</div><div style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:11px;"><span style="color:#440000;">CITY</span><span>${geo.city||"N/A"}</span><span style="color:#440000;">COUNTRY</span><span>${geo.country||"N/A"}</span><span style="color:#440000;">ISP</span><span>${(geo.isp||"N/A").slice(0,22)}</span><span style="color:#440000;">ASN</span><span>${geo.as||"N/A"}</span><span style="color:#440000;">TZ</span><span>${geo.timezone||"N/A"}</span></div></div>`).openPopup();
+
+  // ABUSE + RADAR
+  fetch(`${API}/api/abuse/${encodeURIComponent(geo.query||q)}`).then(r=>r.json()).then(ab=>{
+    let d=ab.data;
+    let sc={RISK:10,FRAUD:5,PROXY:5,BOTNET:5,PHISH:5,SPAM:5};
+    if(d){let a=d.abuseConfidenceScore||0;sc={RISK:a,FRAUD:Math.min(a*.8,100),PROXY:d.isPublicProxy?80:10,BOTNET:Math.min(a*.6,100),PHISH:Math.min(a*.7,100),SPAM:Math.min(a*.5,100)};mkCard("ABUSE SCORE",a+"%","infoGrid");mkCard("ABUSE REPORTS",d.totalReports,"infoGrid");mkCard("LAST REPORTED",d.lastReportedAt?d.lastReportedAt.slice(0,10):"NEVER","infoGrid");mkCard("PUBLIC PROXY",d.isPublicProxy?"YES":"NO","infoGrid");document.getElementById("statAbuse").innerText=a+"%";}
+    else{document.getElementById("statAbuse").innerText="N/A";}
+    drawRadar(sc);
+  }).catch(()=>{document.getElementById("statAbuse").innerText="N/A";drawRadar({RISK:0,FRAUD:0,PROXY:0,BOTNET:0,PHISH:0,SPAM:0});});
+
+  // WHOIS + SSL
+  document.getElementById("whoisSslSection").style.display="grid";
+  fetch(`${API}/api/whois/${encodeURIComponent(q)}`).then(r=>r.json()).then(w=>{
+    let tbl=document.getElementById("whoisTable");tbl.innerHTML="";
+    if(w&&(w.domain||w.registrar)){
+      const rows=[["Domaine",w.domain||q],["Registrar",w.registrar||"N/A"],["Créé",(w.creation_date||"N/A").toString().slice(0,10)],["Expire",(w.expiration_date||"N/A").toString().slice(0,10)],["MAJ",(w.updated_date||"N/A").toString().slice(0,10)],["NS1",Array.isArray(w.name_servers)?w.name_servers[0]||"N/A":w.name_servers||"N/A"],["NS2",Array.isArray(w.name_servers)&&w.name_servers[1]?w.name_servers[1]:"N/A"],["DNSSEC",w.dnssec||"N/A"],["Status",Array.isArray(w.status)?w.status[0]||"N/A":w.status||"N/A"]];
+      rows.forEach(([k,v])=>{let tr=document.createElement("tr");tr.innerHTML=`<td>${k}</td><td>${v}</td>`;tbl.appendChild(tr);});
+    }else{tbl.innerHTML='<tr><td colspan="2" style="color:var(--text3);text-align:center;padding:20px;">Données WHOIS non disponibles</td></tr>';}
+  }).catch(()=>{});
+  fetch(`${API}/api/ssl/${encodeURIComponent(q)}`).then(r=>r.json()).then(s=>{
+    let tbl=document.getElementById("sslTable");tbl.innerHTML="";
+    if(s&&!s.error){
+      const rows=[["Sujet",s.subject],["Émetteur",s.issuer],["Valide depuis",s.validFrom],["Expire",s.validTo],["Statut",s.valid?"✓ VALID":"✕ EXPIRED"],["SAN",s.san?.slice(0,60)||"N/A"],["Serial",s.serial?.slice(0,20)||"N/A"]];
+      rows.forEach(([k,v])=>{let tr=document.createElement("tr");tr.innerHTML=`<td>${k}</td><td>${v||"N/A"}</td>`;tbl.appendChild(tr);});
+    }else{tbl.innerHTML='<tr><td colspan="2" style="color:var(--text3);text-align:center;padding:20px;">SSL non disponible</td></tr>';}
+  }).catch(()=>{});
+
+  // DNS
+  document.getElementById("dnsSection").style.display="block";
+  fetch(`${API}/api/dns/${encodeURIComponent(q)}`).then(r=>r.json()).then(dns=>{
+    let body=document.getElementById("dnsBody");body.innerHTML="";
+    Object.entries(dns).forEach(([type,records])=>{
+      if(!records||!records.length)return;
+      let wrap=document.createElement("div");wrap.style.marginBottom="16px";
+      let badge=document.createElement("div");badge.className="dns-type";badge.innerText=type;wrap.appendChild(badge);
+      records.forEach(rec=>{
+        let r=document.createElement("div");r.className="dns-record";
+        let val=typeof rec==="object"?JSON.stringify(rec):Array.isArray(rec)?rec.join(" "):String(rec);
+        r.innerText=val;wrap.appendChild(r);
+      });
+      body.appendChild(wrap);
+    });
+    if(!body.children.length)body.innerHTML='<div class="status-msg">Aucun enregistrement DNS trouvé</div>';
+  }).catch(()=>{document.getElementById("dnsSection").style.display="none";});
+
+  // REVERSE DNS
+  fetch(`${API}/api/rdns/${encodeURIComponent(geo.query||q)}`).then(r=>r.json()).then(rd=>{if(rd.hostnames&&rd.hostnames.length){mkCard("REVERSE DNS",rd.hostnames.join(", "),"infoGrid");scanData["REVERSE DNS"]=rd.hostnames.join(", ");}}).catch(()=>{});
+
+  // PORTS
+  document.getElementById("portsSection").style.display="block";
+  fetch(`${API}/api/ports/${encodeURIComponent(geo.query||q)}`).then(r=>r.json()).then(ports=>{
+    let body=document.getElementById("portsBody");body.innerHTML="";
+    let openCount=0;
+    ports.forEach((p,i)=>{
+      if(p.status==="open")openCount++;
+      let row=document.createElement("div");row.className="port-row";row.style.animationDelay=(i*40)+"ms";
+      row.innerHTML=`<span class="port-num">${p.port}</span><span class="port-name">${p.name}</span><div class="port-dot ${p.status}"></div><span class="port-status ${p.status}">${p.status.toUpperCase()}</span>`;
+      body.appendChild(row);
+      scanData["PORT_"+p.port]=p.status;
+    });
+    document.getElementById("statPorts").innerText=openCount;
+  }).catch(()=>{document.getElementById("portsSection").style.display="none";document.getElementById("statPorts").innerText="N/A";});
+
+  // TRACEROUTE
+  document.getElementById("traceSection").style.display="block";
+  fetch(`${API}/api/traceroute/${encodeURIComponent(geo.query||q)}`).then(r=>r.json()).then(hops=>{
+    let body=document.getElementById("traceBody");body.innerHTML="";
+    if(!hops.length){body.innerHTML='<div class="status-msg">Aucun hop tracé</div>';return;}
+    hops.forEach((h,i)=>{
+      let row=document.createElement("div");row.className="hop-row";row.style.animationDelay=(i*80)+"ms";
+      row.innerHTML=`<span class="hop-num">${h.hop}</span><div class="hop-line"><div class="hop-fill" style="animation-delay:${i*80}ms"></div></div><span class="hop-ip">${h.ip}</span><span class="hop-ms">${h.ms}</span>`;
+      body.appendChild(row);
+    });
+  }).catch(()=>{document.getElementById("traceSection").style.display="none";});
+
+  notify("✓ Scan terminé — "+geo.city+", "+geo.country);
+}
+
+/* ─── LEAK ─── */
+async function runLeak(){
+  let q=document.getElementById("leakInput").value.trim();if(!q)return;
+  leakData=[];
+  document.getElementById("leakResults").innerHTML='<div class="status-msg">⬡ CONNEXION À INTELX...</div>';
+  document.getElementById("leakExportBar").style.display="none";
+  document.getElementById("leakStats").style.display="none";
+  document.getElementById("leakProgressWrap").style.display="block";
+  let fill=document.getElementById("leakProgressFill"),lbl=document.getElementById("leakProgressLabel");
+  fill.style.width="0%";lbl.innerText="CONNEXION INTELX...";
+  let p=0;let pi=setInterval(()=>{p=Math.min(p+8,85);fill.style.width=p+"%";},200);
+  try{
+    const r=await fetch(`${API}/api/intelx/search`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:q})});
+    const data=await r.json();
+    clearInterval(pi);fill.style.width="100%";lbl.innerText="COMPLETE ✓";
+    setTimeout(()=>document.getElementById("leakProgressWrap").style.display="none",500);
+    leakData=data.records||[];
+    renderLeakResults(leakData,q);
+  }catch(e){
+    clearInterval(pi);document.getElementById("leakProgressWrap").style.display="none";
+    document.getElementById("leakResults").innerHTML=`<div class="status-msg" style="color:var(--text3);">⚠ Erreur de connexion au backend.<br><span style="font-size:10px;">Vérifiez que le serveur est bien démarré sur le port 3000.</span></div>`;
+    notify("✕ Erreur backend : "+e.message);
+  }
+}
+
+function renderLeakResults(records,q){
+  let el=document.getElementById("leakResults");el.innerHTML="";
+  if(!records.length){el.innerHTML='<div class="status-msg">⬡ Aucun résultat pour "'+q+'"</div>';return;}
+  let buckets=[...new Set(records.map(r=>r.bucket))];
+  document.getElementById("leakCount").innerText=records.length;
+  document.getElementById("leakSources").innerText=buckets.length;
+  document.getElementById("leakTarget").innerText=q;
+  document.getElementById("leakStats").style.display="grid";
+  document.getElementById("leakExportBar").style.display="flex";
+  records.forEach((r,i)=>{
+    let d=document.createElement("div");d.className="intel-card";d.style.animationDelay=(i*40)+"ms";
+    let name=r.name||r.systemid||"UNKNOWN",bucket=r.bucket||"N/A",date=r.date?r.date.slice(0,10):"N/A",size=r.size?fmtBytes(r.size):"N/A";
+    d.innerHTML=`<div class="intel-type">${bucket}</div><div class="intel-value">${name}</div><div class="intel-meta">DATE: ${date} &nbsp;|&nbsp; SIZE: ${size}</div>`;
+    d.onclick=()=>openPopup("LEAK RESULT",`NAME: ${name}\nBUCKET: ${bucket}\nDATE: ${date}\nSIZE: ${size}\nQUERY: ${q}`);
+    d.ondblclick=e=>{e.stopPropagation();navigator.clipboard.writeText(name);notify("⎘ Copié : "+name.slice(0,40));};
+    el.appendChild(d);
+  });
+  notify("✓ "+records.length+" résultats trouvés pour "+q);
+}
+
+function fmtBytes(b){if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";}
+
+/* ─── EXPORT ─── */
+function exportData(fmt){
+  if(!Object.keys(scanData).length){notify("✕ Aucun scan disponible");return;}
+  if(fmt==="json"){dl(JSON.stringify(scanData,null,2),"cryptx_report.json","application/json");notify("⬇ JSON exporté");}
+  else if(fmt==="csv"){dl("KEY,VALUE\n"+Object.entries(scanData).map(([k,v])=>`"${k}","${String(v).replace(/"/g,'""')}"`).join("\n"),"cryptx_report.csv","text/csv");notify("⬇ CSV exporté");}
+  else if(fmt==="pdf"){let w=window.open("","_blank");let rows=Object.entries(scanData).map(([k,v])=>`<tr><td style="color:#ff0033;padding:6px 14px;border-bottom:1px solid #200;letter-spacing:2px;">${k}</td><td style="color:#cc3333;padding:6px 14px;border-bottom:1px solid #200;">${v}</td></tr>`).join("");w.document.write(`<html><head><style>body{background:#000;color:#fff;font-family:monospace;padding:30px;}h1{color:#ff0033;font-size:20px;letter-spacing:6px;}table{width:100%;border-collapse:collapse;margin-top:20px;}</style></head><body><h1>CRYPTX INTELLIGENCE</h1><div style="color:#330000;font-size:11px;margin-top:6px;">${new Date().toISOString()}</div><table>${rows}</table></body></html>`);w.document.close();setTimeout(()=>w.print(),400);notify("⬇ PDF exporté");}
+}
+function exportLeak(fmt){
+  if(!leakData.length){notify("✕ Aucun résultat");return;}
+  if(fmt==="json"){dl(JSON.stringify(leakData,null,2),"leak_report.json","application/json");}
+  else if(fmt==="csv"){dl("NAME,BUCKET,DATE,SIZE\n"+leakData.map(r=>`"${r.name||""}","${r.bucket||""}","${(r.date||"").slice(0,10)}","${r.size||""}"`).join("\n"),"leak_report.csv","text/csv");}
+  else if(fmt==="txt"){dl(leakData.map(r=>`NAME: ${r.name||"N/A"}\nBUCKET: ${r.bucket||"N/A"}\nDATE: ${(r.date||"N/A").slice(0,10)}\n---`).join("\n"),"leak_report.txt","text/plain");}
+  else if(fmt==="pdf"){let w=window.open("","_blank");let rows=leakData.map(r=>`<tr><td>${r.name||"N/A"}</td><td>${r.bucket||"N/A"}</td><td>${(r.date||"").slice(0,10)}</td></tr>`).join("");w.document.write(`<html><head><style>body{background:#000;color:#cc3333;font-family:monospace;padding:20px;}h1{color:#ff0033;letter-spacing:4px;}table{width:100%;border-collapse:collapse;}td,th{padding:6px 10px;border-bottom:1px solid #200;font-size:11px;}th{color:#ff0033;}</style></head><body><h1>CRYPTX LEAK REPORT</h1><table><tr><th>NAME</th><th>BUCKET</th><th>DATE</th></tr>${rows}</table></body></html>`);w.document.close();setTimeout(()=>w.print(),300);}
+  notify("⬇ "+fmt.toUpperCase()+" exporté");
+}
+
+/* ─── RADAR ─── */
+function drawRadar(scores){
+  let cv=document.getElementById("radarCanvas"),ctx=cv.getContext("2d");ctx.clearRect(0,0,cv.width,cv.height);
+  let cx=cv.width/2,cy=cv.height/2+10,r=100,labels=Object.keys(scores),vals=Object.values(scores),n=labels.length;
+  for(let ring=1;ring<=4;ring++){ctx.beginPath();for(let i=0;i<n;i++){let a=(i/n)*Math.PI*2-Math.PI/2,x=cx+Math.cos(a)*(r*ring/4),y=cy+Math.sin(a)*(r*ring/4);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.closePath();ctx.strokeStyle=`rgba(255,0,51,${.07+ring*.03})`;ctx.lineWidth=1;ctx.stroke();}
+  for(let i=0;i<n;i++){let a=(i/n)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.strokeStyle="rgba(255,0,51,.18)";ctx.stroke();}
+  ctx.beginPath();for(let i=0;i<n;i++){let a=(i/n)*Math.PI*2-Math.PI/2,v=vals[i]/100,x=cx+Math.cos(a)*r*v,y=cy+Math.sin(a)*r*v;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.closePath();ctx.fillStyle="rgba(255,0,51,.13)";ctx.fill();ctx.strokeStyle="#ff0033";ctx.lineWidth=2;ctx.shadowColor="#ff0033";ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+  for(let i=0;i<n;i++){let a=(i/n)*Math.PI*2-Math.PI/2,v=vals[i]/100,x=cx+Math.cos(a)*r*v,y=cy+Math.sin(a)*r*v;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle="#ff0033";ctx.shadowColor="#ff0033";ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;}
+  ctx.font="9px 'Share Tech Mono'";ctx.fillStyle="rgba(150,50,80,.9)";ctx.textAlign="center";
+  for(let i=0;i<n;i++){let a=(i/n)*Math.PI*2-Math.PI/2,x=cx+Math.cos(a)*(r+20),y=cy+Math.sin(a)*(r+20)+3;ctx.fillText(labels[i],x,y);}
+}
+
+/* ─── INIT ─── */
+renderFav();
+</script>
+</body>
+</html>
